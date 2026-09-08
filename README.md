@@ -35,8 +35,8 @@ nothing is sent anywhere when the tool is idle.
 
 Publora's [terms](https://publora.com/terms) and
 [privacy policy](https://publora.com/privacy) cover what happens to a post after
-that. Publora is a paid service with a free tier: 15 posts a month and three
-accounts, no card required.
+that. Publora is a paid service with a free tier: 15 posts a month, three accounts and
+every network except X, no card required.
 
 ## Attachments
 
