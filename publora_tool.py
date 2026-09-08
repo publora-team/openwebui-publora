@@ -23,7 +23,7 @@ class Tools:
     class Valves(BaseModel):
         api_key: str = Field(
             "",
-            description="Publora API key from app.publora.com, Settings, API keys. Stored encrypted.",
+            description="Publora API key: app.publora.com, API in the left menu, Create New Key. Stored encrypted.",
         )
 
     def __init__(self):
@@ -248,7 +248,8 @@ class Tools:
         self,
         text: str,
         account_id: str,
-        in_hours: int = 1,
+        in_hours: int = 0,
+        in_minutes: int = 0,
         media_url: str = "",
         __files__: Optional[list] = None,
         __event_emitter__: Optional[Callable] = None,
@@ -257,12 +258,14 @@ class Tools:
         Adds a post to the Publora queue and publishes it later. A file attached to the chat is sent with it.
         :param text: The text of the post.
         :param account_id: Account id from list_accounts.
-        :param in_hours: How many hours to wait before publishing.
+        :param in_hours: Hours to wait before publishing.
+        :param in_minutes: Minutes to wait, on top of the hours.
         :param media_url: Optional public link to an image or video, used when no file is attached.
         """
-        if in_hours < 1:
-            return "Pick at least one hour ahead, or use publish_post to post now."
-        when = (datetime.now(timezone.utc) + timedelta(hours=in_hours)).strftime("%Y-%m-%dT%H:%M:%SZ")
+        wait = in_hours * 60 + in_minutes
+        if wait < 5:
+            return "Pick at least five minutes ahead, or use publish_post to post now."
+        when = (datetime.now(timezone.utc) + timedelta(minutes=wait)).strftime("%Y-%m-%dT%H:%M:%SZ")
         return await self._post(text, account_id, when, media_url, __files__, __event_emitter__)
 
     async def create_draft(

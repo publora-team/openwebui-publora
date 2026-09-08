@@ -18,10 +18,16 @@ the post.
 ## Setup
 
 1. Import the tool, or paste `publora_tool.py` into Workspace, Tools, New Tool.
-2. Open the tool settings and paste your Publora API key from
-   `app.publora.com`, Settings, API keys. Open WebUI stores it encrypted.
-3. Connect at least one social account inside Publora. The tool publishes
-   through connections you already made, it does not create them.
+2. Get an API key. Sign up at [publora.com](https://publora.com), open
+   `app.publora.com`, click **API** in the left menu, then **Create New Key**.
+   The key is shown once, so copy it there and then.
+3. Open the tool settings in Open WebUI and paste the key. It is stored
+   encrypted.
+4. Connect at least one social account inside Publora, under **Channels**. The
+   tool publishes through connections you already made, it does not create them.
+
+There is no OAuth step here: this tool authenticates with the key alone. If the
+key stops working, create a new one on the same page and paste it again.
 
 Then ask the model to post. It will call `list_accounts` first to learn which
 accounts exist, so you can say "post this to LinkedIn" rather than pasting ids.
