@@ -3,7 +3,7 @@ title: Publora
 author: Publora
 author_url: https://publora.com
 git_url: https://github.com/publora-team/openwebui-publora
-version: 1.0.0
+version: 1.0.1
 license: MIT
 requirements: httpx
 description: Publish, schedule and draft social posts on ten networks through Publora. A file attached to the chat goes out with the post.
@@ -17,6 +17,8 @@ from pydantic import BaseModel, Field
 
 API = "https://api.publora.com/api/v1"
 TIMEOUT = 60
+# Sent on every request so Publora can tell these calls apart from other clients.
+CLIENT = "publora-openwebui/1.0.1"
 
 
 class Tools:
@@ -28,11 +30,11 @@ class Tools:
 
     def __init__(self):
         self.valves = self.Valves()
-        # Native (Agentic) Mode — единственный поддерживаемый режим вызова,
-        # поэтому событий из legacy-набора здесь нет.
+        # Native (Agentic) Mode is the only calling mode this tool supports,
+        # so none of the legacy citation events are emitted here.
         self.citation = False
 
-    # --- разговор с Publora ------------------------------------------------
+    # --- talking to Publora ------------------------------------------------
 
     async def _call(self, method: str, path: str, payload: Optional[dict] = None) -> dict:
         if not self.valves.api_key:
@@ -42,7 +44,10 @@ class Tools:
                 response = await client.request(
                     method,
                     f"{API}{path}",
-                    headers={"x-publora-key": self.valves.api_key},
+                    headers={
+                        "x-publora-key": self.valves.api_key,
+                        "User-Agent": CLIENT,
+                    },
                     json=payload,
                 )
         except httpx.HTTPError as error:
@@ -61,15 +66,15 @@ class Tools:
         return body
 
     async def _say(self, emitter: Optional[Callable], text: str, done: bool = False) -> None:
-        """Строка состояния в интерфейсе: тип status работает в обоих режимах вызова."""
+        """A status line in the interface: the status event works in either mode."""
         if not emitter:
             return
         await emitter({"type": "status", "data": {"description": text, "done": done}})
 
-    # --- файлы, прикреплённые в чате ---------------------------------------
+    # --- files attached to the chat -----------------------------------------
 
     def _first_file(self, files: Optional[list]) -> Optional[dict]:
-        """Из вложений берём первое изображение или видео."""
+        """Take the first image or video out of the attachments."""
         for entry in files or []:
             item = entry.get("file", entry) if isinstance(entry, dict) else {}
             meta = item.get("meta") or {}
@@ -85,8 +90,8 @@ class Tools:
 
     def _read_file(self, handle: dict) -> Optional[bytes]:
         """
-        Байты вложения. Сначала путь на диске, затем хранилище Open WebUI:
-        в разных сборках доступно разное, поэтому пробуем оба пути.
+        The bytes of an attachment. The path on disk first, then the Open WebUI
+        storage: builds differ in what they expose, so both routes are tried.
         """
         path = handle.get("path")
         if path:
@@ -111,7 +116,7 @@ class Tools:
         return None
 
     async def _attach(self, post_group_id: str, handle: dict) -> Optional[str]:
-        """Кладём файл в пост: адрес для заливки, сама заливка, проверка."""
+        """Put a file on a post: ask for an upload url, upload, confirm."""
         blob = self._read_file(handle)
         if not blob:
             return "The attached file could not be read on this server."
@@ -160,9 +165,9 @@ class Tools:
 
         handle = self._first_file(files)
 
-        # С вложением порядок обязателен: сначала черновик, потом файл, потом
-        # время. Прикрепление медиа сбрасывает запланированный пост обратно в
-        # черновик, поэтому расписание ставится последним.
+        # With an attachment the order matters: draft first, then the file, then
+        # the time. Attaching media puts a scheduled post back into draft, so the
+        # schedule is set last.
         payload: dict = {"content": text, "platforms": [account_id]}
         if media_url and not handle:
             payload["mediaUrls"] = [media_url]
@@ -201,7 +206,7 @@ class Tools:
             return f"Draft saved for {account_id}.{tail}"
         return f"Queued for {when} on {account_id}.{tail}"
 
-    # --- инструменты -------------------------------------------------------
+    # --- tools ---------------------------------------------------------------
 
     async def list_accounts(self, __event_emitter__: Optional[Callable] = None) -> str:
         """
@@ -218,7 +223,7 @@ class Tools:
             return "No accounts connected yet. Connect one at app.publora.com first."
 
         lines = [
-            f"{item.get('platformId')} — {item.get('displayName') or item.get('username') or 'unnamed'}"
+            f"{item.get('platformId')} - {item.get('displayName') or item.get('username') or 'unnamed'}"
             for item in rows
         ]
         await self._say(__event_emitter__, "Done", done=True)
